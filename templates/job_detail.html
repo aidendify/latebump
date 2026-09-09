@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ job.customer_name }} — LateBump{% endblock %}
+{% block content %}
+<div class="page-head">
+  <p class="crumb"><a href="{{ url_for('index') }}">Jobs</a> / #{{ job.id }}</p>
+  <h1>{{ job.customer_name }}</h1>
+  <p class="lede">
+    <span class="badge badge-{{ job.status }}">{{ status_label(job.status) }}</span>
+    {% if job.title or job.job_ref %} · {{ job.title or job.job_ref }}{% endif %}
+  </p>
+</div>
+
+<section class="card">
+  <dl class="facts">
+    <div>
+      <dt>Phone</dt>
+      <dd>{{ job.customer_phone or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Email</dt>
+      <dd>{{ job.customer_email or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Window</dt>
+      <dd>{{ job.scheduled_window or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Site</dt>
+      <dd>{{ job.site_label or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Ref</dt>
+      <dd>{{ job.job_ref or "—" }}</dd>
+    </div>
+    <div>
+      <dt>Notes</dt>
+      <dd>{{ job.notes or "—" }}</dd>
+    </div>
+  </dl>
+  <div class="btn-row">
+    {% if job.status not in ('done', 'cancelled') %}
+    <form method="post" action="{{ url_for('mark_done', job_id=job.id) }}" style="display:inline">
+      <button type="submit" class="btn btn-ok">Mark done</button>
+    </form>
+    <form method="post" action="{{ url_for('mark_cancel', job_id=job.id) }}" style="display:inline">
+      <button type="submit" class="btn btn-danger">Cancel</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+{% if job.status in ('open', 'delayed') %}
+<section class="card late-card">
+  <h2>Running late</h2>
+  <p class="hint">Pick a delay or a new ETA, draft the customer message, then copy or send.</p>
+
+  <form method="post" action="{{ url_for('bump_draft', job_id=job.id) }}" class="stack" id="delay-form">
+    <div class="preset-row" role="group" aria-label="Delay presets">
+      {% for m in DELAY_PRESETS %}
+      <label class="preset">
+        <input type="radio" name="delay_minutes" value="{{ m }}" {% if selected_delay == m %}checked{% endif %}>
+        <span>+{{ m }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    <label>Custom new ETA (HH:MM or clock text)
+      <input name="custom_eta" value="{{ custom_eta }}" placeholder="4:30 PM">
+    </label>
+    <label class="check-row">
+      <input type="checkbox" name="offer_reschedule" value="1" {% if offer_reschedule %}checked{% endif %}>
+      Offer reschedule
+    </label>
+    <button type="submit" class="btn btn-late">Draft message</button>
+  </form>
+
+  {% if draft %}
+  <hr class="sep">
+  <h3>Edit draft</h3>
+  <p class="hint">Edits below are what get logged and sent. New ETA: <strong>{{ draft.new_eta_text }}</strong></p>
+
+  <form method="post" class="stack" id="send-form">
+    <input type="hidden" name="delay_minutes" value="{{ draft.delay_minutes if draft.delay_minutes is not none else '' }}">
+    <input type="hidden" name="new_eta_text" value="{{ draft.new_eta_text }}">
+    {% if draft.offer_reschedule %}
+    <input type="hidden" name="offer_reschedule" value="1">
+    {% endif %}
+    <label>Message
+      <textarea id="draft-body" name="body" rows="6">{{ draft.body }}</textarea>
+    </label>
+
+    <div class="btn-row">
+      {# Clipboard via DOM read — never put |tojson inside double-quoted onclick #}
+      <button type="button" class="btn btn-quiet" onclick="copyFromDraft(this)">Copy to clipboard</button>
+
+      <button type="submit" class="btn" formaction="{{ url_for('copy_bump', job_id=job.id) }}">
+        Copy SMS · Mark delayed
+      </button>
+      <button type="submit" class="btn btn-quiet" formaction="{{ url_for('copy_bump', job_id=job.id) }}">
+        Copy email · Mark delayed
+      </button>
+
+      {% if can_sms %}
+      <button type="submit" class="btn" formaction="{{ url_for('send_sms', job_id=job.id) }}">Send SMS</button>
+      {% else %}
+      <button type="button" class="btn" disabled title="Needs Twilio + customer phone">Send SMS</button>
+      {% endif %}
+
+      {% if can_email %}
+      <button type="submit" class="btn" formaction="{{ url_for('send_email', job_id=job.id) }}">Send email</button>
+      {% else %}
+      <button type="button" class="btn" disabled title="Needs SMTP + customer email">Send email</button>
+      {% endif %}
+    </div>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Audit</h2>
+  {% if bumps %}
+  <ul class="timeline">
+    {% for b in bumps %}
+    <li>
+      <div>
+        <span class="kind">{{ b.channel }} · {% if b.ok %}ok{% else %}fail{% endif %}</span>
+        <div class="hint">
+          ETA {{ b.new_eta_text }}
+          {% if b.delay_minutes %} · +{{ b.delay_minutes }}m{% endif %}
+          {% if b.offer_reschedule %} · reschedule offered{% endif %}
+          {% if b.destination %} · {{ b.destination }}{% endif %}
+          {% if b.error %} · {{ b.error }}{% endif %}
+        </div>
+        <pre class="body">{{ b.body }}</pre>
+      </div>
+      <span class="at">{{ b.at }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">No bumps logged for this job yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
