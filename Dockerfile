@@ -14,6 +14,9 @@ COPY app.py .
 COPY helpers.py .
 COPY helpers_core.py .
 COPY helpers_io.py .
+COPY views_auth.py .
+COPY views_jobs.py .
+COPY views_send.py .
 COPY templates/ templates/
 COPY static/ static/
 
