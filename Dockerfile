@@ -12,6 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 COPY helpers.py .
+COPY helpers_core.py .
+COPY helpers_io.py .
 COPY templates/ templates/
 COPY static/ static/
 
