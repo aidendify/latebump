@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Not found — LateBump{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Not found</h1>
+  <p class="lede">That page doesn’t exist.</p>
+  <p><a class="btn" href="{{ url_for('index') }}">Back to jobs</a></p>
+</section>
+{% endblock %}
