@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Jobs — LateBump{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Today’s jobs</h1>
+  <p class="lede">{{ today }} · open and delayed jobs. Tap a job when you’re running late.</p>
+</div>
+
+<p class="btn-row">
+  <a class="btn" href="{{ url_for('new_job') }}">New job</a>
+</p>
+
+<section class="card">
+  <h2>Active</h2>
+  {% if jobs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Customer</th>
+          <th>Title / ref</th>
+          <th>Window</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job in jobs %}
+        <tr>
+          <td><a href="{{ url_for('job_detail', job_id=job.id) }}">{{ job.customer_name }}</a></td>
+          <td>{{ job.title or job.job_ref or "—" }}</td>
+          <td>{{ job.scheduled_window or "—" }}</td>
+          <td><span class="badge badge-{{ job.status }}">{{ status_label(job.status) }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No open or delayed jobs. Create one to send a running-late ping.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Recent bumps</h2>
+  {% if bumps %}
+  <ul class="timeline">
+    {% for b in bumps %}
+    <li>
+      <div>
+        <span class="kind">{{ b.channel }}{% if b.ok %} · ok{% else %} · fail{% endif %}</span>
+        <div class="hint">
+          <a href="{{ url_for('job_detail', job_id=b.job_id) }}">{{ b.customer_name }}</a>
+          · ETA {{ b.new_eta_text }}
+          {% if b.delay_minutes %}+{{ b.delay_minutes }}m{% endif %}
+        </div>
+      </div>
+      <span class="at">{{ b.at }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty">No bumps yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
